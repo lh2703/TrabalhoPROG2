@@ -1,129 +1,52 @@
-#include "Jogo.h"
+#include <allegro5/allegro5.h>
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro_ttf.h>
-#include <allegro5/allegro_font.h>
-#include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include "Jogo.h"
 
-#define LARGURA_MAPA 20
-#define ALTURA_MAPA 10
+int main() {
+    al_init();
+    al_init_image_addon();
+    al_install_keyboard();
 
-int mapa[LARGURA_MAPA][ALTURA_MAPA];
+    ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60.0);
+    ALLEGRO_EVENT_QUEUE* queue = al_create_event_queue();
+    ALLEGRO_DISPLAY* disp = al_create_display(400, 300);
 
-Jogo* inicializar_jogo() {
-    Jogo* jogo = malloc(sizeof(Jogo));
+    //inicia o jogo
+    Jogo* jogo = inicializar_jogo();
 
-    jogo->x = 0;
-    jogo->y = 0;
-    jogo->si = 0;
-    jogo->direcao = 0;
+    al_register_event_source(queue, al_get_keyboard_event_source());
+    al_register_event_source(queue, al_get_display_event_source(disp));
+    al_register_event_source(queue, al_get_timer_event_source(timer));
 
-    jogo->sprite = al_load_bitmap("sprites2.png");
-    jogo->grama = al_load_bitmap("grama.png");
-    jogo->parede = al_load_bitmap("parede.png");
+    bool redraw = true;
+    ALLEGRO_EVENT event;
+    al_start_timer(timer);
 
-    if (!jogo->sprite || !jogo->grama || !jogo->parede) {
-        printf("Erro ao carregar uma das imagens\n");
-        exit(1);
-    }
+    while (1) {
+        al_wait_for_event(queue, &event);
 
-    for (int i = 0; i < ALLEGRO_KEY_MAX; i++) {
-        jogo->keys[i] = false;
-    }
-
-    FILE* file = fopen("cenario.txt", "r");
-    if (!file) {
-        printf("Erro ao abrir o arquivo de cenário\n");
-        exit(1);
-    }
-
-    for (int i = 0; i < ALTURA_MAPA; i++) {
-        for (int j = 0; j < LARGURA_MAPA; j++) {
-            fscanf(file, "%d", &mapa[i][j]);
+        if (event.type == ALLEGRO_EVENT_TIMER) {
+            redraw = true;
+        } else if (event.type == ALLEGRO_EVENT_KEY_DOWN || event.type == ALLEGRO_EVENT_KEY_UP) {
+            processar_entrada(jogo, event);  //  entrada do teclado
+        } else if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+            break;
         }
-    }
-    fclose(file);
 
-    ALLEGRO_DISPLAY* display = al_create_display(800, 600);
-    if (!display) {
-        printf("Erro ao criar o display\n");
-        exit(1);
-    }
-
-    return jogo;
-}
-
-void processar_entrada(Jogo* jogo, ALLEGRO_EVENT event) {
-    if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
-        jogo->keys[event.keyboard.keycode] = true;
-    } else if (event.type == ALLEGRO_EVENT_KEY_UP) {
-        jogo->keys[event.keyboard.keycode] = false;
-    }
-}
-
-void atualizar_jogo(Jogo* jogo) {
-    static int anim_counter = 0;
-
-    if (jogo->keys[ALLEGRO_KEY_RIGHT] || jogo->keys[ALLEGRO_KEY_LEFT] ||
-        jogo->keys[ALLEGRO_KEY_UP] || jogo->keys[ALLEGRO_KEY_DOWN]) {
-        anim_counter++;
-        if (anim_counter % 2 == 0) {
-            jogo->si = (jogo->si + 1) % 3;
-        }
-    } else {
-        jogo->si = 1;
-    }
-
-    if (jogo->keys[ALLEGRO_KEY_RIGHT]) {
-        jogo->x += 12;
-        jogo->direcao = 3;
-    } else if (jogo->keys[ALLEGRO_KEY_LEFT]) {
-        jogo->x -= 12;
-        jogo->direcao = 1;
-    } else if (jogo->keys[ALLEGRO_KEY_DOWN]) {
-        jogo->y += 12;
-        jogo->direcao = 0;
-    } else if (jogo->keys[ALLEGRO_KEY_UP]) {
-        jogo->y -= 12;
-        jogo->direcao = 2;
-    }
-}
-
-void renderizar_jogo(Jogo* jogo) {
-    // desenha o cenario
-    for (int i = 0; i < ALTURA_MAPA; i++) {
-        for (int j = 0; j < LARGURA_MAPA; j++) {
-            al_draw_bitmap(jogo->grama, j * 90, i * 90, 0);
-
-            if (mapa[i][j] == 1) {
-                al_draw_bitmap(jogo->parede, j * 90, i * 90, 0);
-            }
+        if (redraw && al_is_event_queue_empty(queue)) {
+            atualizar_jogo(jogo);  // atualiza a animacao do naruto
+            renderizar_jogo(jogo);  // desenha naruto
+            redraw = false;
         }
     }
 
-    // desenha o personagem
-    int flip = 0;
-    if (jogo->direcao == 0) {
-        flip = ALLEGRO_FLIP_HORIZONTAL;
-    }
+    finalizar_jogo(jogo);  // Libera recursos do jogo
+    al_destroy_display(disp);
+    al_destroy_timer(timer);
+    al_destroy_event_queue(queue);
 
-    al_draw_bitmap_region(
-        jogo->sprite,
-        94 * jogo->si,       // X da região do sprite
-        99 * jogo->direcao,  // Y da região do sprite
-        94,                  // Largura do sprite
-        99,                  // Altura do sprite
-        jogo->x,             // Posição X do personagem
-        jogo->y,             // Posição Y do personagem
-        flip                 // Flip horizontal se necessário
-    );
-
-    al_flip_display();
-}
-
-void finalizar_jogo(Jogo* jogo) {
-    al_destroy_bitmap(jogo->sprite);
-    al_destroy_bitmap(jogo->grama);
-    al_destroy_bitmap(jogo->parede);
-    free(jogo);
+    return 0;
 }
