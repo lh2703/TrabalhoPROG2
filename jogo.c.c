@@ -3,7 +3,7 @@
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro_font.h>
 #include <stdlib.h>
-#include <stdio.h>
+#include <stdio
 
 #define LARGURA_MAPA 20
 #define ALTURA_MAPA 10
