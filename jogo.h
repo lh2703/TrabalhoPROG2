@@ -6,15 +6,18 @@
 // Estrutura que representa o estado do jogo
 typedef struct {
     int x, y;                // Coordenadas do personagem
-    int si;                  // Õndice do frame do sprite
-    int direcao;             // DireÁ„o do personagem (0 = baixo, 1 = lado, 2 = cima, 3 = direita)
+    int si;                  // √çndice do frame do sprite
+    int direcao;             // Dire√ß√£o do personagem (0 = baixo, 1 = lado, 2 = cima, 3 = direita)
     bool keys[ALLEGRO_KEY_MAX];  // Estado das teclas
     ALLEGRO_BITMAP* sprite;  // Sprite do personagem
-    ALLEGRO_BITMAP* grama;   // Imagem da grama
+    ALLEGRO_BITMAP* chao;   // Imagem da grama
     ALLEGRO_BITMAP* parede;  // Imagem da parede
+    ALLEGRO_BITMAP* agua; //imagem da agua
+    ALLEGRO_BITMAP* cenario_1;
+    ALLEGRO_BITMAP* cenario_2;
 } Jogo;
 
-// FunÁıes do jogo
+// Fun√ß√µes do jogo
 Jogo* inicializar_jogo();            // Inicializa o jogo
 void processar_entrada(Jogo* jogo, ALLEGRO_EVENT event);  // Processa as entradas do teclado
 void atualizar_jogo(Jogo* jogo);     // Atualiza o estado do jogo
