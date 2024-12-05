@@ -58,28 +58,6 @@ Jogo* inicializar_jogo() {
     return jogo;
 }
 
-bool verificar_posicao_valida(int x, int y) {
-    // Tamanho de cada célula no mapa
-    const int TAMANHO_CELULA = 70;
-
-    // Converte as coordenadas para índices da grade
-    int coluna = x / TAMANHO_CELULA;
-    int linha = y / TAMANHO_CELULA;
-
-    // Checa os limites do mapa
-    if (linha < 0 || linha >= ALTURA_MAPA || coluna < 0 || coluna >= LARGURA_MAPA) {
-        return false;
-    }
-
-    // Verifica se a célula atual é transitável
-    int tipo_celula = mapa[linha][coluna];
-    if (tipo_celula == 1 || tipo_celula == 2 || tipo_celula == 4) {
-        return false;  // Obstáculos: parede, água ou cacto
-    }
-
-    return true;  // Célula transitável
-}
-
 void processar_entrada(Jogo* jogo, ALLEGRO_EVENT event) {
     if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
         jogo->keys[event.keyboard.keycode] = true;
@@ -91,6 +69,75 @@ void processar_entrada(Jogo* jogo, ALLEGRO_EVENT event) {
 void atualizar_jogo(Jogo* jogo) {
     static int anim_counter = 0;
 
+    int novo_x = jogo->x;
+    int novo_y = jogo->y;
+
+    // Tamanho do mapa e das células
+    const int TAMANHO_CELULA = 70;
+
+    // Dimensões e margens internas do personagem
+    const int largura_personagem = 94;
+    const int altura_personagem = 99;
+    const int margem_esquerda = 30;
+    const int margem_direita = 30;
+    const int margem_superior = 20;
+    const int margem_inferior = 20;
+
+    // Movimenta o personagem com base nas teclas pressionadas
+    if (jogo->keys[ALLEGRO_KEY_RIGHT]) {
+        novo_x += 14;
+        jogo->direcao = 3;
+    } else if (jogo->keys[ALLEGRO_KEY_LEFT]) {
+        novo_x -= 14;
+        jogo->direcao = 1;
+    } else if (jogo->keys[ALLEGRO_KEY_DOWN]) {
+        novo_y += 14;
+        jogo->direcao = 0;
+    } else if (jogo->keys[ALLEGRO_KEY_UP]) {
+        novo_y -= 14;
+        jogo->direcao = 2;
+    }
+
+    // Verificação de colisão
+    bool colisao = false;
+
+    // Calcula as posições dos cantos do personagem
+    int canto_superior_esquerdo_x = novo_x + margem_esquerda;
+    int canto_superior_esquerdo_y = novo_y + margem_superior;
+
+    int canto_inferior_direito_x = novo_x + largura_personagem - margem_direita;
+    int canto_inferior_direito_y = novo_y + altura_personagem - margem_inferior;
+
+    // Converte coordenadas para índices no mapa
+    int coluna_inicial = canto_superior_esquerdo_x / TAMANHO_CELULA;
+    int linha_inicial = canto_superior_esquerdo_y / TAMANHO_CELULA;
+
+    int coluna_final = canto_inferior_direito_x / TAMANHO_CELULA;
+    int linha_final = canto_inferior_direito_y / TAMANHO_CELULA;
+
+    // Verifica cada célula ocupada pelo personagem
+    for (int linha = linha_inicial; linha <= linha_final; linha++) {
+        for (int coluna = coluna_inicial; coluna <= coluna_final; coluna++) {
+            // Checa os limites do mapa
+            if (linha < 0 || linha >= ALTURA_MAPA || coluna < 0 || coluna >= LARGURA_MAPA) {
+                colisao = true;
+            } else {
+                // Verifica tipos de células que impedem o movimento
+                int tipo_celula = mapa[linha][coluna];
+                if (tipo_celula == 1 || tipo_celula == 2 || tipo_celula == 4) {
+                    colisao = true;  // Obstáculos: parede, água e cacto
+                }
+            }
+        }
+    }
+
+    // Atualiza posição apenas se não houve colisão
+    if (!colisao) {
+        jogo->x = novo_x;
+        jogo->y = novo_y;
+    }
+
+    // Atualiza animação do sprite
     if (jogo->keys[ALLEGRO_KEY_RIGHT] || jogo->keys[ALLEGRO_KEY_LEFT] ||
         jogo->keys[ALLEGRO_KEY_UP] || jogo->keys[ALLEGRO_KEY_DOWN]) {
         anim_counter++;
@@ -100,44 +147,7 @@ void atualizar_jogo(Jogo* jogo) {
     } else {
         jogo->si = 1;
     }
-
-    if (jogo->keys[ALLEGRO_KEY_RIGHT]) {
-        jogo->x += 14;
-        jogo->direcao = 3;
-    } else if (jogo->keys[ALLEGRO_KEY_LEFT]) {
-        jogo->x -= 14;
-        jogo->direcao = 1;
-    } else if (jogo->keys[ALLEGRO_KEY_DOWN]) {
-        jogo->y += 14;
-        jogo->direcao = 0;
-    } else if (jogo->keys[ALLEGRO_KEY_UP]) {
-        jogo->y -= 14;
-        jogo->direcao = 2;
-    }
 }
-bool verificar_posicao_valida(int x, int y) {
-    // Tamanho de cada célula no mapa
-    const int TAMANHO_CELULA = 70;
-
-    // Converte as coordenadas para índices da grade
-    int coluna = x / TAMANHO_CELULA;
-    int linha = y / TAMANHO_CELULA;
-
-    // Checa os limites do mapa
-    if (linha < 0 || linha >= ALTURA_MAPA || coluna < 0 || coluna >= LARGURA_MAPA) {
-        return false;
-    }
-
-    // Verifica se a célula atual é transitável
-    int tipo_celula = mapa[linha][coluna];
-    if (tipo_celula == 1 || tipo_celula == 2 || tipo_celula == 4) {
-        return false;  // Obstáculos: parede, água ou cacto
-    }
-
-    return true;  // Célula transitável
-}
-
-
 
 
 void processar_entrada(Jogo* jogo, ALLEGRO_EVENT event) {
