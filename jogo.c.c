@@ -58,6 +58,28 @@ Jogo* inicializar_jogo() {
     return jogo;
 }
 
+bool verificar_posicao_valida(int x, int y) {
+    // Tamanho de cada célula no mapa
+    const int TAMANHO_CELULA = 70;
+
+    // Converte as coordenadas para índices da grade
+    int coluna = x / TAMANHO_CELULA;
+    int linha = y / TAMANHO_CELULA;
+
+    // Checa os limites do mapa
+    if (linha < 0 || linha >= ALTURA_MAPA || coluna < 0 || coluna >= LARGURA_MAPA) {
+        return false;
+    }
+
+    // Verifica se a célula atual é transitável
+    int tipo_celula = mapa[linha][coluna];
+    if (tipo_celula == 1 || tipo_celula == 2 || tipo_celula == 4) {
+        return false;  // Obstáculos: parede, água ou cacto
+    }
+
+    return true;  // Célula transitável
+}
+
 void processar_entrada(Jogo* jogo, ALLEGRO_EVENT event) {
     if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
         jogo->keys[event.keyboard.keycode] = true;
@@ -93,6 +115,93 @@ void atualizar_jogo(Jogo* jogo) {
         jogo->direcao = 2;
     }
 }
+bool verificar_posicao_valida(int x, int y) {
+    // Tamanho de cada célula no mapa
+    const int TAMANHO_CELULA = 70;
+
+    // Converte as coordenadas para índices da grade
+    int coluna = x / TAMANHO_CELULA;
+    int linha = y / TAMANHO_CELULA;
+
+    // Checa os limites do mapa
+    if (linha < 0 || linha >= ALTURA_MAPA || coluna < 0 || coluna >= LARGURA_MAPA) {
+        return false;
+    }
+
+    // Verifica se a célula atual é transitável
+    int tipo_celula = mapa[linha][coluna];
+    if (tipo_celula == 1 || tipo_celula == 2 || tipo_celula == 4) {
+        return false;  // Obstáculos: parede, água ou cacto
+    }
+
+    return true;  // Célula transitável
+}
+
+
+
+
+void processar_entrada(Jogo* jogo, ALLEGRO_EVENT event) {
+    if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
+        jogo->keys[event.keyboard.keycode] = true;
+    } else if (event.type == ALLEGRO_EVENT_KEY_UP) {
+        jogo->keys[event.keyboard.keycode] = false;
+    }
+}
+
+void atualizar_jogo(Jogo* jogo) {
+    static int anim_counter = 0;
+
+    int novo_x = jogo->x;
+    int novo_y = jogo->y;
+
+    // Tentativa de mover o personagem
+    if (jogo->keys[ALLEGRO_KEY_RIGHT]) {
+        novo_x += 14;
+        jogo->direcao = 3;
+    } else if (jogo->keys[ALLEGRO_KEY_LEFT]) {
+        novo_x -= 14;
+        jogo->direcao = 1;
+    } else if (jogo->keys[ALLEGRO_KEY_DOWN]) {
+        novo_y += 14;
+        jogo->direcao = 0;
+    } else if (jogo->keys[ALLEGRO_KEY_UP]) {
+        novo_y -= 14;
+        jogo->direcao = 2;
+    }
+
+    // Margens da área de colisão (ajuste os valores para afinar o resultado)
+    const int margem_esquerda = 40;
+    const int margem_direita = 40;
+    const int margem_superior = 30;
+    const int margem_inferior = 30;
+
+    // Dimensões do personagem
+    const int largura_personagem = 94;  // Largura total do sprite
+    const int altura_personagem = 99;  // Altura total do sprite
+
+    // Verifica se a nova posição está dentro de uma área válida
+    if (
+        verificar_posicao_valida(novo_x + margem_esquerda, novo_y + margem_superior) &&
+        verificar_posicao_valida(novo_x + largura_personagem - margem_direita, novo_y + margem_superior) &&
+        verificar_posicao_valida(novo_x + margem_esquerda, novo_y + altura_personagem - margem_inferior) &&
+        verificar_posicao_valida(novo_x + largura_personagem - margem_direita, novo_y + altura_personagem - margem_inferior)
+    ) {
+        jogo->x = novo_x;
+        jogo->y = novo_y;
+    }
+
+    // Atualiza a animação do sprite
+    if (jogo->keys[ALLEGRO_KEY_RIGHT] || jogo->keys[ALLEGRO_KEY_LEFT] ||
+        jogo->keys[ALLEGRO_KEY_UP] || jogo->keys[ALLEGRO_KEY_DOWN]) {
+        anim_counter++;
+        if (anim_counter % 2 == 0) {
+            jogo->si = (jogo->si + 1) % 3;
+        }
+    } else {
+        jogo->si = 1;
+    }
+}
+
 
 void renderizar_jogo(Jogo* jogo) {
 
