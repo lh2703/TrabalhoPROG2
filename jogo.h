@@ -23,5 +23,6 @@ void processar_entrada(Jogo* jogo, ALLEGRO_EVENT event);  // Processa as entrada
 void atualizar_jogo(Jogo* jogo);     // Atualiza o estado do jogo
 void renderizar_jogo(Jogo* jogo);    // Renderiza o jogo na tela
 void finalizar_jogo(Jogo* jogo);     // Finaliza o jogo e libera recursos
+bool verificar_posicao_valida(int x, int y);
 
 #endif // JOGO_H
