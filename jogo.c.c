@@ -1,198 +1,228 @@
 #include "Jogo.h"
+#include <allegro5/allegro.h>
+#include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_image.h>
-#include <allegro5/allegro_ttf.h>
-#include <allegro5/allegro_font.h>
-#include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
 
-#define LARGURA_MAPA 12
-#define ALTURA_MAPA 8
+#define CENARIO_LARGURA 12  // Número de colunas do cenário
+#define CENARIO_ALTURA 8    // Número de linhas do cenário
+#define LARGURA_CELULA 70   // Tamanho da célula do cenário (em pixels)
+#define ALTURA_CELULA 70
 
-int mapa[ALTURA_MAPA][LARGURA_MAPA];
+struct Jogo {
+    ALLEGRO_DISPLAY* display;
+    ALLEGRO_EVENT_QUEUE* fila_eventos;
+    ALLEGRO_TIMER* timer;
+    ALLEGRO_BITMAP* sprite;
+    bool rodando;
+    float x, y;            // Posição do personagem
+    float velocidade;
+    int direcao;           // 0 = baixo, 1 = esquerda, 2 = cima, 3 = direita
+    int si;                // Quadro atual do sprite
+    float tempo_quadro;    // Controla a troca de quadros
+    bool teclas[4];        // Estado das teclas (cima, baixo, esquerda, direita)
 
-Jogo* inicializar_jogo() {
-    Jogo* jogo = malloc(sizeof(Jogo));
+    // Cenário
+    int cenario[CENARIO_ALTURA][CENARIO_LARGURA];
+    ALLEGRO_BITMAP* chao;
+    ALLEGRO_BITMAP* parede;
+    ALLEGRO_BITMAP* agua;
+};
 
-    jogo->x = 0;
-    jogo->y = 0;
-    jogo->si = 0;
-    jogo->direcao = 0;
-
-    jogo->sprite = al_load_bitmap("sprites.png");
-    jogo->chao = al_load_bitmap("areia.png");
-    jogo->parede = al_load_bitmap("pedra.png");
-    jogo->agua = al_load_bitmap("agua2.png");
-    jogo->cenario_1 = al_load_bitmap("caveira.png");
-    jogo->cenario_2 = al_load_bitmap("cacto.png");
-
-    if (!jogo->sprite || !jogo->chao || !jogo->parede || !jogo->agua) {
-        printf("Erro ao carregar uma das imagens\n");
-        exit(1);
-    }
-
-    for (int i = 0; i < ALLEGRO_KEY_MAX; i++) {
-        jogo->keys[i] = false;
-    }
-
-    FILE* file = fopen("cenario.txt", "r");
+bool carregar_cenario(Jogo* J, const char* arquivo) {
+    FILE* file = fopen(arquivo, "r");
     if (!file) {
-        printf("Erro ao abrir o arquivo de cenário\n");
-        exit(1);
+        fprintf(stderr, "Erro ao abrir o arquivo do cenário: %s\n", arquivo);
+        return false;
     }
 
-    for (int i = 0; i < ALTURA_MAPA; i++) {
-        for (int j = 0; j < LARGURA_MAPA; j++) {
-            fscanf(file, "%d", &mapa[i][j]);
+    for (int i = 0; i < CENARIO_ALTURA; i++) {
+        for (int j = 0; j < CENARIO_LARGURA; j++) {
+            if (fscanf(file, "%d", &J->cenario[i][j]) != 1) {
+                fprintf(stderr, "Erro ao ler o cenário no arquivo %s\n", arquivo);
+                fclose(file);
+                return false;
+            }
         }
     }
+
     fclose(file);
+    return true;
+}
+
+void desenhar_cenario(Jogo* J) {
+    for (int i = 0; i < CENARIO_ALTURA; i++) {
+        for (int j = 0; j < CENARIO_LARGURA; j++) {
+            float x = j * LARGURA_CELULA;
+            float y = i * ALTURA_CELULA;
+
+            switch (J->cenario[i][j]) {
+                case 0: // Chão
+                    al_draw_bitmap(J->chao, x, y, 0);
+                    break;
+                case 1: // Parede
+                    al_draw_bitmap(J->parede, x, y, 0);
+                    break;
+                case 2: // Água
+                    al_draw_bitmap(J->agua, x, y, 0);
+                    break;
+            }
+        }
+    }
+}
+
+Jogo* novo_jogo() {
+    if (!al_init()) return NULL;
+    if (!al_install_keyboard()) return NULL;
 
     ALLEGRO_DISPLAY* display = al_create_display(840, 560);
-    if (!display) {
-        printf("Erro ao criar o display\n");
-        exit(1);
+    if (!display) return NULL;
+
+    ALLEGRO_TIMER* timer = al_create_timer(1.0 / 60.0);
+    if (!timer) {
+        al_destroy_display(display);
+        return NULL;
     }
+
+    ALLEGRO_EVENT_QUEUE* fila_eventos = al_create_event_queue();
+    if (!fila_eventos) {
+        al_destroy_timer(timer);
+        al_destroy_display(display);
+        return NULL;
+    }
+
+    al_init_primitives_addon();
+    al_init_image_addon();
+
+    al_register_event_source(fila_eventos, al_get_display_event_source(display));
+    al_register_event_source(fila_eventos, al_get_timer_event_source(timer));
+    al_register_event_source(fila_eventos, al_get_keyboard_event_source());
+
+    ALLEGRO_BITMAP* sprite = al_load_bitmap("sprites.png");
+    if (!sprite) {
+        al_destroy_event_queue(fila_eventos);
+        al_destroy_timer(timer);
+        al_destroy_display(display);
+        return NULL;
+    }
+
+    Jogo* jogo = malloc(sizeof(Jogo));
+    if (!jogo) {
+        al_destroy_bitmap(sprite);
+        al_destroy_event_queue(fila_eventos);
+        al_destroy_timer(timer);
+        al_destroy_display(display);
+        return NULL;
+    }
+
+    jogo->display = display;
+    jogo->fila_eventos = fila_eventos;
+    jogo->timer = timer;
+    jogo->sprite = sprite;
+    jogo->rodando = true;
+    jogo->x = 400;
+    jogo->y = 300;
+    jogo->velocidade = 4.0;
+    jogo->direcao = 0;
+    jogo->si = 0;
+    jogo->tempo_quadro = 0;
+
+    for (int i = 0; i < 4; i++) {
+        jogo->teclas[i] = false;
+    }
+
+    // Carregar cenário
+    if (!carregar_cenario(jogo, "cenario.txt")) {
+        al_destroy_bitmap(sprite);
+        finalizar_jogo(jogo);
+        return NULL;
+    }
+
+    // Carregar texturas
+    jogo->chao = al_load_bitmap("areia.png");
+    jogo->parede = al_load_bitmap("pedra.png");
+    jogo->agua = al_load_bitmap("cacto.png");
+    if (!jogo->chao || !jogo->parede || !jogo->agua) {
+        fprintf(stderr, "Erro ao carregar texturas do cenário.\n");
+        finalizar_jogo(jogo);
+        return NULL;
+    }
+
+    al_start_timer(timer);
 
     return jogo;
 }
 
-void processar_entrada(Jogo* jogo, ALLEGRO_EVENT event) {
-    if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
-        jogo->keys[event.keyboard.keycode] = true;
-    } else if (event.type == ALLEGRO_EVENT_KEY_UP) {
-        jogo->keys[event.keyboard.keycode] = false;
-    }
+void finalizar_jogo(Jogo* J) {
+    al_destroy_bitmap(J->sprite);
+    al_destroy_bitmap(J->chao);
+    al_destroy_bitmap(J->parede);
+    al_destroy_bitmap(J->agua);
+    al_destroy_event_queue(J->fila_eventos);
+    al_destroy_timer(J->timer);
+    al_destroy_display(J->display);
+    free(J);
 }
 
-void atualizar_jogo(Jogo* jogo) {
-    static int anim_counter = 0;
+bool jogo_rodando(Jogo* J) {
+    return J->rodando;
+}
 
-    int novo_x = jogo->x;
-    int novo_y = jogo->y;
+void atualizar_jogo(Jogo* J) {
+    ALLEGRO_EVENT evento;
 
-    // Tamanho do mapa e das células
-    const int TAMANHO_CELULA = 70;
+    while (al_get_next_event(J->fila_eventos, &evento)) {
+        if (evento.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+            J->rodando = false;
+        } else if (evento.type == ALLEGRO_EVENT_TIMER) {
+            J->tempo_quadro += 1.0 / 60.0;
+            if (J->tempo_quadro >= 0.1) {
+                J->si = (J->si + 1) % 5;  // Ciclo de animação
+                J->tempo_quadro = 0;
+            }
 
-    // Dimensões e margens internas do personagem
-    const int largura_personagem = 94;
-    const int altura_personagem = 99;
-    const int margem_esquerda = 30;
-    const int margem_direita = 30;
-    const int margem_superior = 20;
-    const int margem_inferior = 20;
-
-    // Movimenta o personagem com base nas teclas pressionadas
-    if (jogo->keys[ALLEGRO_KEY_RIGHT]) {
-        novo_x += 14;
-        jogo->direcao = 3;
-    } else if (jogo->keys[ALLEGRO_KEY_LEFT]) {
-        novo_x -= 14;
-        jogo->direcao = 1;
-    } else if (jogo->keys[ALLEGRO_KEY_DOWN]) {
-        novo_y += 14;
-        jogo->direcao = 0;
-    } else if (jogo->keys[ALLEGRO_KEY_UP]) {
-        novo_y -= 14;
-        jogo->direcao = 2;
-    }
-
-    // Verificação de colisão
-    bool colisao = false;
-
-    // Calcula as posições dos cantos do personagem
-    int canto_superior_esquerdo_x = novo_x + margem_esquerda;
-    int canto_superior_esquerdo_y = novo_y + margem_superior;
-
-    int canto_inferior_direito_x = novo_x + largura_personagem - margem_direita;
-    int canto_inferior_direito_y = novo_y + altura_personagem - margem_inferior;
-
-    // Converte coordenadas para índices no mapa
-    int coluna_inicial = canto_superior_esquerdo_x / TAMANHO_CELULA;
-    int linha_inicial = canto_superior_esquerdo_y / TAMANHO_CELULA;
-
-    int coluna_final = canto_inferior_direito_x / TAMANHO_CELULA;
-    int linha_final = canto_inferior_direito_y / TAMANHO_CELULA;
-
-    // Verifica cada célula ocupada pelo personagem
-    for (int linha = linha_inicial; linha <= linha_final; linha++) {
-        for (int coluna = coluna_inicial; coluna <= coluna_final; coluna++) {
-            // Checa os limites do mapa
-            if (linha < 0 || linha >= ALTURA_MAPA || coluna < 0 || coluna >= LARGURA_MAPA) {
-                colisao = true;
-            } else {
-                // Verifica tipos de células que impedem o movimento
-                int tipo_celula = mapa[linha][coluna];
-                if (tipo_celula == 1 || tipo_celula == 2 || tipo_celula == 4) {
-                    colisao = true;  // Obstáculos: parede, água e cacto
-                }
+            // Movimentos do personagem e direção
+            if (J->teclas[0]) { // Cima
+                J->y -= J->velocidade;
+                J->direcao = 2; // Atualiza direção para cima
+            }
+            if (J->teclas[1]) { // Baixo
+                J->y += J->velocidade;
+                J->direcao = 0; // Atualiza direção para baixo
+            }
+            if (J->teclas[2]) { // Esquerda
+                J->x -= J->velocidade;
+                J->direcao = 1; // Atualiza direção para esquerda
+            }
+            if (J->teclas[3]) { // Direita
+                J->x += J->velocidade;
+                J->direcao = 3; // Atualiza direção para direita
+            }
+        } else if (evento.type == ALLEGRO_EVENT_KEY_DOWN) {
+            switch (evento.keyboard.keycode) {
+                case ALLEGRO_KEY_UP: J->teclas[0] = true; break;
+                case ALLEGRO_KEY_DOWN: J->teclas[1] = true; break;
+                case ALLEGRO_KEY_LEFT: J->teclas[2] = true; break;
+                case ALLEGRO_KEY_RIGHT: J->teclas[3] = true; break;
+            }
+        } else if (evento.type == ALLEGRO_EVENT_KEY_UP) {
+            switch (evento.keyboard.keycode) {
+                case ALLEGRO_KEY_UP: J->teclas[0] = false; break;
+                case ALLEGRO_KEY_DOWN: J->teclas[1] = false; break;
+                case ALLEGRO_KEY_LEFT: J->teclas[2] = false; break;
+                case ALLEGRO_KEY_RIGHT: J->teclas[3] = false; break;
             }
         }
     }
 
-    // Atualiza posição apenas se não houve colisão
-    if (!colisao) {
-        jogo->x = novo_x;
-        jogo->y = novo_y;
+    // Se nenhuma tecla de direção está pressionada, mantemos o personagem na posição inicial (sem movimento)
+    if (!J->teclas[0] && !J->teclas[1] && !J->teclas[2] && !J->teclas[3]) {
+        J->si = 0;
     }
 
-    // Atualiza animação do sprite
-    if (jogo->keys[ALLEGRO_KEY_RIGHT] || jogo->keys[ALLEGRO_KEY_LEFT] ||
-        jogo->keys[ALLEGRO_KEY_UP] || jogo->keys[ALLEGRO_KEY_DOWN]) {
-        anim_counter++;
-        if (anim_counter % 2 == 0) {
-            jogo->si = (jogo->si + 1) % 3;
-        }
-    } else {
-        jogo->si = 1;
-    }
-}
-
-void renderizar_jogo(Jogo* jogo) {
-    for (int i = 0; i < ALTURA_MAPA; i++) {
-        for (int j = 0; j < LARGURA_MAPA; j++) {
-            al_draw_bitmap(jogo->chao, j * 70, i * 70, 0);
-
-            if (mapa[i][j] == 1) {
-                al_draw_bitmap(jogo->parede, j * 70, i * 70, 0);
-            }
-            if (mapa[i][j] == 2) {
-                al_draw_bitmap(jogo->agua, j * 70, i * 70, 0);
-            }
-            if (mapa[i][j] == 3) {
-                al_draw_bitmap(jogo->cenario_1, j * 70, i * 70, 0);
-            }
-            if (mapa[i][j] == 4) {
-                al_draw_bitmap(jogo->cenario_2, j * 70, i * 70, 0);
-            }
-        }
-    }
-
-    // desenha o personagem
-    int flip = 0;
-    if (jogo->direcao == 0) {
-        flip = ALLEGRO_FLIP_HORIZONTAL;
-    }
-
-    al_draw_bitmap_region(
-        jogo->sprite,
-        94 * jogo->si,       // X da região do sprite
-        99 * jogo->direcao,  // Y da região do sprite
-        94,                  // Largura do sprite
-        99,                  // Altura do sprite
-        jogo->x,             // Posição X do personagem
-        jogo->y,             // Posição Y do personagem
-        flip                 // Flip horizontal se necessário
-    );
-
-    al_flip_display();
-}
-
-void finalizar_jogo(Jogo* jogo) {
-    al_destroy_bitmap(jogo->sprite);
-    al_destroy_bitmap(jogo->chao);
-    al_destroy_bitmap(jogo->parede);
-    al_destroy_bitmap(jogo->agua);
-    al_destroy_bitmap(jogo->cenario_1);
-    al_destroy_bitmap(jogo->cenario_2);
-    free(jogo);
+    al_clear_to_color(al_map_rgb(0, 0, 0)); // Limpa a tela
+    desenhar_cenario(J); // Desenha o cenário
+    al_draw_bitmap_region(J->sprite, 94 * J->si, 99 * J->direcao, 94, 99, J->x, J->y, 0); // Desenha o personagem com a direção correta
+    al_flip_display(); // Atualiza a tela
 }
