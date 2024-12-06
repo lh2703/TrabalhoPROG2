@@ -7,8 +7,8 @@
 
 #define CENARIO_LARGURA 12  // Número de colunas do cenário
 #define CENARIO_ALTURA 8    // Número de linhas do cenário
-#define LARGURA_CELULA 70   // Tamanho da célula do cenário (em pixels)
-#define ALTURA_CELULA 70
+#define LARGURA_IMG 70   // Tamanho da célula do cenário (em pixels)
+#define ALTURA_IMG 70
 
 struct Jogo {
     ALLEGRO_DISPLAY* display;
@@ -52,20 +52,29 @@ bool carregar_cenario(Jogo* J, const char* arquivo) {
 }
 
 void desenhar_cenario(Jogo* J) {
+    // Desenha o chão (areia) para todo o cenário
     for (int i = 0; i < CENARIO_ALTURA; i++) {
         for (int j = 0; j < CENARIO_LARGURA; j++) {
-            float x = j * LARGURA_CELULA;
-            float y = i * ALTURA_CELULA;
+            float x = j * LARGURA_IMG;
+            float y = i * ALTURA_IMG;
+
+            // Desenha o chão (areia.png) por toda a área do mapa
+            al_draw_bitmap(J->chao, x, y, 0);
+        }
+    }
+
+    // Agora desenha as outras imagens (paredes, água, etc.) sobre o chão
+    for (int i = 0; i < CENARIO_ALTURA; i++) {
+        for (int j = 0; j < CENARIO_LARGURA; j++) {
+            float x = j * LARGURA_IMG;
+            float y = i * ALTURA_IMG;
 
             switch (J->cenario[i][j]) {
-                case 0: // Chão
-                    al_draw_bitmap(J->chao, x, y, 0);
-                    break;
                 case 1: // Parede
-                    al_draw_bitmap(J->parede, x, y, 0);
+                    al_draw_bitmap(J->parede, x, y, 0); // Desenha a parede sobre o chão
                     break;
                 case 2: // Água
-                    al_draw_bitmap(J->agua, x, y, 0);
+                    al_draw_bitmap(J->agua, x, y, 0); // Desenha a água sobre o chão
                     break;
             }
         }
@@ -123,7 +132,7 @@ Jogo* novo_jogo() {
     jogo->rodando = true;
     jogo->x = 400;
     jogo->y = 300;
-    jogo->velocidade = 4.0;
+    jogo->velocidade = 2.7;
     jogo->direcao = 0;
     jogo->si = 0;
     jogo->tempo_quadro = 0;
@@ -152,17 +161,6 @@ Jogo* novo_jogo() {
     al_start_timer(timer);
 
     return jogo;
-}
-
-void finalizar_jogo(Jogo* J) {
-    al_destroy_bitmap(J->sprite);
-    al_destroy_bitmap(J->chao);
-    al_destroy_bitmap(J->parede);
-    al_destroy_bitmap(J->agua);
-    al_destroy_event_queue(J->fila_eventos);
-    al_destroy_timer(J->timer);
-    al_destroy_display(J->display);
-    free(J);
 }
 
 bool jogo_rodando(Jogo* J) {
@@ -225,4 +223,15 @@ void atualizar_jogo(Jogo* J) {
     desenhar_cenario(J); // Desenha o cenário
     al_draw_bitmap_region(J->sprite, 94 * J->si, 99 * J->direcao, 94, 99, J->x, J->y, 0); // Desenha o personagem com a direção correta
     al_flip_display(); // Atualiza a tela
+}
+
+void finalizar_jogo(Jogo* J) {
+    al_destroy_bitmap(J->sprite);
+    al_destroy_bitmap(J->chao);
+    al_destroy_bitmap(J->parede);
+    al_destroy_bitmap(J->agua);
+    al_destroy_event_queue(J->fila_eventos);
+    al_destroy_timer(J->timer);
+    al_destroy_display(J->display);
+    free(J);
 }
