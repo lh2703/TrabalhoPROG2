@@ -16,14 +16,14 @@ struct Jogo {
     ALLEGRO_TIMER* timer;
     ALLEGRO_BITMAP* sprite;
     bool rodando;
-    float x, y;            // Posição do personagem
+    float x, y;            
     float velocidade;
-    int direcao;           // 0 = baixo, 1 = esquerda, 2 = cima, 3 = direita
-    int si;                // Quadro atual do sprite
-    float tempo_quadro;    // Controla a troca de quadros
-    bool teclas[4];        // Estado das teclas (cima, baixo, esquerda, direita)
+    int direcao;           
+    int si;                
+    float tempo_quadro;    
+    bool teclas[4];        
 
-    // Cenário
+    
     int cenario[CENARIO_ALTURA][CENARIO_LARGURA];
     ALLEGRO_BITMAP* chao;
     ALLEGRO_BITMAP* parede;
@@ -54,35 +54,35 @@ bool carregar_cenario(Jogo* J, const char* arquivo) {
 }
 
 void desenhar_cenario(Jogo* J) {
-    // Desenha o chão (areia) para todo o cenário
+    
     for (int i = 0; i < CENARIO_ALTURA; i++) {
         for (int j = 0; j < CENARIO_LARGURA; j++) {
             float x = j * LARGURA_IMG;
             float y = i * ALTURA_IMG;
 
-            // Desenha o chão (areia.png) por toda a área do mapa
+            
             al_draw_bitmap(J->chao, x, y, 0);
         }
     }
 
-    // Agora desenha as outras imagens (paredes, água, etc.) sobre o chão
+    
     for (int i = 0; i < CENARIO_ALTURA; i++) {
         for (int j = 0; j < CENARIO_LARGURA; j++) {
             float x = j * LARGURA_IMG;
             float y = i * ALTURA_IMG;
 
             switch (J->cenario[i][j]) {
-                case 1: // Parede
-                    al_draw_bitmap(J->parede, x, y, 0); // Desenha a parede sobre o chão
+                case 1: 
+                    al_draw_bitmap(J->parede, x, y, 0); 
                     break;
-                case 2: // Água
-                    al_draw_bitmap(J->agua, x, y, 0); // Desenha a água sobre o chão
+                case 2: 
+                    al_draw_bitmap(J->agua, x, y, 0); 
                     break;
                 case 3:
-                    al_draw_bitmap(J->cacto, x, y, 0); // Desenha o cacto sobre o chão
+                    al_draw_bitmap(J->cacto, x, y, 0); 
                     break;
                 case 4:
-                    al_draw_bitmap(J->caveira, x, y, 0); // desenha caveira sobre do chao
+                    al_draw_bitmap(J->caveira, x, y, 0); 
                     break;
             }
         }
@@ -151,14 +151,14 @@ Jogo* novo_jogo() {
         jogo->teclas[i] = false;
     }
 
-    // carrega o cenario
+    
     if (!carregar_cenario(jogo, "cenario2.txt")) {
         al_destroy_bitmap(sprite);
         finalizar_jogo(jogo);
         return NULL;
     }
 
-    // carrega a textura
+    
     jogo->chao = al_load_bitmap("areia.png");
     jogo->parede = al_load_bitmap("pedra.png");
     jogo->agua = al_load_bitmap("agua.png");
@@ -181,27 +181,27 @@ bool jogo_rodando(Jogo* J) {
 
 bool verifica_colisao(Jogo* J, float nova_x, float nova_y) {
 
-    // Lados da célula onde o personagem estará
+   
     int col_left = nova_x / (LARGURA_IMG-4);
     int col_right = (nova_x + LARGURA_IMG - 1) / LARGURA_IMG;
     int row_top = nova_y / 2;
     int row_bottom = (nova_y + ALTURA_IMG - 2) / ALTURA_IMG;
 
-    // Verifica se a posição está dentro dos limites do cenário e se não colide com parede (1) ou água (2)
+   
     if (col_left >= 0 && col_left < CENARIO_LARGURA && row_top >= 0 && row_top < CENARIO_ALTURA) {
-        if (J->cenario[row_top][col_left] == 1 || J->cenario[row_top][col_left] == 2 || J->cenario[row_top][col_left]== 3) return true; // Colisão na parte superior esquerda
+        if (J->cenario[row_top][col_left] == 1 || J->cenario[row_top][col_left] == 2 || J->cenario[row_top][col_left]== 3) return true; 
     }
 
     if (col_right >= 0 && col_right < CENARIO_LARGURA && row_top >= 0 && row_top < CENARIO_ALTURA) {
-        if (J->cenario[row_top][col_right] == 1 || J->cenario[row_top][col_right] == 2 || J->cenario[row_top][col_right] == 3) return true; // Colisão na parte superior direita
+        if (J->cenario[row_top][col_right] == 1 || J->cenario[row_top][col_right] == 2 || J->cenario[row_top][col_right] == 3) return true; 
     }
 
     if (col_left >= 0 && col_left < CENARIO_LARGURA && row_bottom >= 0 && row_bottom < CENARIO_ALTURA) {
-        if (J->cenario[row_bottom][col_left] == 1 || J->cenario[row_bottom][col_left] == 2 || J->cenario[row_bottom][col_left] == 3) return true; // Colisão na parte inferior esquerda
+        if (J->cenario[row_bottom][col_left] == 1 || J->cenario[row_bottom][col_left] == 2 || J->cenario[row_bottom][col_left] == 3) return true; 
     }
 
     if (col_right >= 0 && col_right < CENARIO_LARGURA && row_bottom >= 0 && row_bottom < CENARIO_ALTURA) {
-        if (J->cenario[row_bottom][col_right] == 1 || J->cenario[row_bottom][col_right] == 2 || J->cenario[row_bottom][col_right] == 3) return true; // Colisão na parte inferior direita
+        if (J->cenario[row_bottom][col_right] == 1 || J->cenario[row_bottom][col_right] == 2 || J->cenario[row_bottom][col_right] == 3) return true; 
     }
 
     return false;
@@ -209,48 +209,48 @@ bool verifica_colisao(Jogo* J, float nova_x, float nova_y) {
 
 
  bool verifica_colisao_agua(Jogo* J, float nova_x, float nova_y) {
-    // Lados da célula onde o personagem estará
+    
     int col_left = nova_x / LARGURA_IMG;
     int col_right = (nova_x + LARGURA_IMG - 1) / LARGURA_IMG;
     int row_top = nova_y / ALTURA_IMG;
     int row_bottom = (nova_y + ALTURA_IMG - 1) / ALTURA_IMG;
 
-    // Verifica se a posição está dentro dos limites do cenário e se o valor da célula é água (2)
+   
     if (col_left >= 0 && col_left < CENARIO_LARGURA && row_top >= 0 && row_top < CENARIO_ALTURA) {
         if (J->cenario[row_top][col_left] == 2) {
-            return true; // Colisão na parte superior esquerda
+            return true; 
         }
     }
 
     if (col_right >= 0 && col_right < CENARIO_LARGURA && row_top >= 0 && row_top < CENARIO_ALTURA) {
         if (J->cenario[row_top][col_right] == 2) {
-            return true; // Colisão na parte superior direita
+            return true; 
         }
     }
 
     if (col_left >= 0 && col_left < CENARIO_LARGURA && row_bottom >= 0 && row_bottom < CENARIO_ALTURA) {
         if (J->cenario[row_bottom][col_left] == 2) {
-            return true; // Colisão na parte inferior esquerda
+            return true; 
         }
     }
 
     if (col_right >= 0 && col_right < CENARIO_LARGURA && row_bottom >= 0 && row_bottom < CENARIO_ALTURA) {
         if (J->cenario[row_bottom][col_right] == 2) {
-            return true; // Colisão na parte inferior direita
+            return true; 
         }
     }
 
-    return false; // Nenhuma colisão com a água
+    return false; 
 }
 
 void atualizar_jogo(Jogo* J) {
     ALLEGRO_EVENT evento;
 
-    // Definir limites do cenário
+   
     float limite_esquerdo = 0;
-    float limite_direito = (CENARIO_LARGURA * LARGURA_IMG) - LARGURA_IMG; // Limite direito
+    float limite_direito = (CENARIO_LARGURA * LARGURA_IMG) - LARGURA_IMG; 
     float limite_superior = 0;
-    float limite_inferior = (CENARIO_ALTURA * ALTURA_IMG) - ALTURA_IMG; // Limite inferior
+    float limite_inferior = (CENARIO_ALTURA * ALTURA_IMG) - ALTURA_IMG;
 
     while (al_get_next_event(J->fila_eventos, &evento)) {
         if (evento.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
@@ -258,34 +258,34 @@ void atualizar_jogo(Jogo* J) {
         } else if (evento.type == ALLEGRO_EVENT_TIMER) {
             J->tempo_quadro += 1.0 / 60.0;
             if (J->tempo_quadro >= 0.1) {
-                J->si = (J->si + 1) % 5;  // Ciclo de animação
+                J->si = (J->si + 1) % 5;  
                 J->tempo_quadro = 0;
             }
 
-            // Movimentos do personagem e direção
+            
             float nova_x = J->x;
             float nova_y = J->y;
 
-            if (J->teclas[0]) { // Cima
+            if (J->teclas[0]) { 
                 nova_y -= J->velocidade;
-                J->direcao = 2; // Atualiza direção para cima
+                J->direcao = 2; 
             }
-            if (J->teclas[1]) { // Baixo
+            if (J->teclas[1]) { 
                 nova_y += J->velocidade;
-                J->direcao = 0; // Atualiza direção para baixo
+                J->direcao = 0; 
             }
-            if (J->teclas[2]) { // Esquerda
+            if (J->teclas[2]) { 
                 nova_x -= J->velocidade;
-                J->direcao = 1; // Atualiza direção para esquerda
+                J->direcao = 1; 
             }
-            if (J->teclas[3]) { // Direita
+            if (J->teclas[3]) { 
                 nova_x += J->velocidade;
-                J->direcao = 3; // Atualiza direção para direita
+                J->direcao = 3; 
             }
 
-            // Verificar se há colisão antes de mover
+            
             if (!verifica_colisao(J, nova_x, nova_y)) {
-                // Verificar limites antes de mover
+                
                 if (nova_x < limite_esquerdo) nova_x = limite_esquerdo;
                 if (nova_x > limite_direito) nova_x = limite_direito;
                 if (nova_y < limite_superior) nova_y = limite_superior;
@@ -311,15 +311,15 @@ void atualizar_jogo(Jogo* J) {
         }
     }
 
-    // caso nenhuma tecla esteja sendo pressionada (naruto parado
+    
     if (!J->teclas[0] && !J->teclas[1] && !J->teclas[2] && !J->teclas[3]) {
         J->si = 0;
     }
 
 
-    desenhar_cenario(J); // Desenha o cenário
+    desenhar_cenario(J); 
     al_draw_bitmap_region(J->sprite, 94 * J->si, 99 * J->direcao, 94, 99, J->x, J->y, 0);
-    al_flip_display(); // Atualiza a tela
+    al_flip_display(); 
 }
 
 void finalizar_jogo(Jogo* J) {
