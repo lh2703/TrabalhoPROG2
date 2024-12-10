@@ -7,7 +7,7 @@
 
 #define CENARIO_LARGURA 12  // Número de colunas do cenário
 #define CENARIO_ALTURA 8    // Número de linhas do cenário
-#define LARGURA_IMG 70   // Tamanho da célula do cenário (em pixels)
+#define LARGURA_IMG 70      // Tamanho da célula do cenário (em pixels)
 #define ALTURA_IMG 70
 
 struct Jogo {
@@ -28,6 +28,8 @@ struct Jogo {
     ALLEGRO_BITMAP* chao;
     ALLEGRO_BITMAP* parede;
     ALLEGRO_BITMAP* agua;
+    ALLEGRO_BITMAP* caveira;
+    ALLEGRO_BITMAP* cacto;
 };
 
 bool carregar_cenario(Jogo* J, const char* arquivo) {
@@ -75,6 +77,12 @@ void desenhar_cenario(Jogo* J) {
                     break;
                 case 2: // Água
                     al_draw_bitmap(J->agua, x, y, 0); // Desenha a água sobre o chão
+                    break;
+                case 3:
+                    al_draw_bitmap(J->cacto, x, y, 0); // Desenha o cacto sobre o chão
+                    break;
+                case 4:
+                    al_draw_bitmap(J->caveira, x, y, 0); // desenha caveira sobre do chao
                     break;
             }
         }
@@ -130,28 +138,32 @@ Jogo* novo_jogo() {
     jogo->timer = timer;
     jogo->sprite = sprite;
     jogo->rodando = true;
-    jogo->x = 400;
-    jogo->y = 300;
+    jogo->x = 10;
+    jogo->y = 0;
     jogo->velocidade = 2.7;
     jogo->direcao = 0;
     jogo->si = 0;
     jogo->tempo_quadro = 0;
 
+
+
     for (int i = 0; i < 4; i++) {
         jogo->teclas[i] = false;
     }
 
-    // Carregar cenário
-    if (!carregar_cenario(jogo, "cenario.txt")) {
+    // carrega o cenario
+    if (!carregar_cenario(jogo, "cenario2.txt")) {
         al_destroy_bitmap(sprite);
         finalizar_jogo(jogo);
         return NULL;
     }
 
-    // Carregar texturas
+    // carrega a textura
     jogo->chao = al_load_bitmap("areia.png");
     jogo->parede = al_load_bitmap("pedra.png");
-    jogo->agua = al_load_bitmap("cacto.png");
+    jogo->agua = al_load_bitmap("agua.png");
+    jogo->cacto = al_load_bitmap("cacto.png");
+    jogo->caveira = al_load_bitmap("caveira.png");
     if (!jogo->chao || !jogo->parede || !jogo->agua) {
         fprintf(stderr, "Erro ao carregar texturas do cenário.\n");
         finalizar_jogo(jogo);
@@ -167,38 +179,78 @@ bool jogo_rodando(Jogo* J) {
     return J->rodando;
 }
 
-// Verifica se a posição do personagem colide com algo no cenário
 bool verifica_colisao(Jogo* J, float nova_x, float nova_y) {
-    // Verificar as 4 direções do personagem
 
+    // Lados da célula onde o personagem estará
+    int col_left = nova_x / (LARGURA_IMG-4);
+    int col_right = (nova_x + LARGURA_IMG - 1) / LARGURA_IMG;
+    int row_top = nova_y / 2;
+    int row_bottom = (nova_y + ALTURA_IMG - 2) / ALTURA_IMG;
+
+    // Verifica se a posição está dentro dos limites do cenário e se não colide com parede (1) ou água (2)
+    if (col_left >= 0 && col_left < CENARIO_LARGURA && row_top >= 0 && row_top < CENARIO_ALTURA) {
+        if (J->cenario[row_top][col_left] == 1 || J->cenario[row_top][col_left] == 2 || J->cenario[row_top][col_left]== 3) return true; // Colisão na parte superior esquerda
+    }
+
+    if (col_right >= 0 && col_right < CENARIO_LARGURA && row_top >= 0 && row_top < CENARIO_ALTURA) {
+        if (J->cenario[row_top][col_right] == 1 || J->cenario[row_top][col_right] == 2 || J->cenario[row_top][col_right] == 3) return true; // Colisão na parte superior direita
+    }
+
+    if (col_left >= 0 && col_left < CENARIO_LARGURA && row_bottom >= 0 && row_bottom < CENARIO_ALTURA) {
+        if (J->cenario[row_bottom][col_left] == 1 || J->cenario[row_bottom][col_left] == 2 || J->cenario[row_bottom][col_left] == 3) return true; // Colisão na parte inferior esquerda
+    }
+
+    if (col_right >= 0 && col_right < CENARIO_LARGURA && row_bottom >= 0 && row_bottom < CENARIO_ALTURA) {
+        if (J->cenario[row_bottom][col_right] == 1 || J->cenario[row_bottom][col_right] == 2 || J->cenario[row_bottom][col_right] == 3) return true; // Colisão na parte inferior direita
+    }
+
+    return false;
+}
+
+
+ bool verifica_colisao_agua(Jogo* J, float nova_x, float nova_y) {
     // Lados da célula onde o personagem estará
     int col_left = nova_x / LARGURA_IMG;
     int col_right = (nova_x + LARGURA_IMG - 1) / LARGURA_IMG;
     int row_top = nova_y / ALTURA_IMG;
     int row_bottom = (nova_y + ALTURA_IMG - 1) / ALTURA_IMG;
 
-    // Verifica se a posição está dentro dos limites do cenário e se não colide com parede (1) ou água (2)
+    // Verifica se a posição está dentro dos limites do cenário e se o valor da célula é água (2)
     if (col_left >= 0 && col_left < CENARIO_LARGURA && row_top >= 0 && row_top < CENARIO_ALTURA) {
-        if (J->cenario[row_top][col_left] == 1 || J->cenario[row_top][col_left] == 2) return true; // Colisão na parte superior esquerda
+        if (J->cenario[row_top][col_left] == 2) {
+            return true; // Colisão na parte superior esquerda
+        }
     }
 
     if (col_right >= 0 && col_right < CENARIO_LARGURA && row_top >= 0 && row_top < CENARIO_ALTURA) {
-        if (J->cenario[row_top][col_right] == 1 || J->cenario[row_top][col_right] == 2) return true; // Colisão na parte superior direita
+        if (J->cenario[row_top][col_right] == 2) {
+            return true; // Colisão na parte superior direita
+        }
     }
 
     if (col_left >= 0 && col_left < CENARIO_LARGURA && row_bottom >= 0 && row_bottom < CENARIO_ALTURA) {
-        if (J->cenario[row_bottom][col_left] == 1 || J->cenario[row_bottom][col_left] == 2) return true; // Colisão na parte inferior esquerda
+        if (J->cenario[row_bottom][col_left] == 2) {
+            return true; // Colisão na parte inferior esquerda
+        }
     }
 
     if (col_right >= 0 && col_right < CENARIO_LARGURA && row_bottom >= 0 && row_bottom < CENARIO_ALTURA) {
-        if (J->cenario[row_bottom][col_right] == 1 || J->cenario[row_bottom][col_right] == 2) return true; // Colisão na parte inferior direita
+        if (J->cenario[row_bottom][col_right] == 2) {
+            return true; // Colisão na parte inferior direita
+        }
     }
 
-    return false; // Não houve colisão
+    return false; // Nenhuma colisão com a água
 }
 
 void atualizar_jogo(Jogo* J) {
     ALLEGRO_EVENT evento;
+
+    // Definir limites do cenário
+    float limite_esquerdo = 0;
+    float limite_direito = (CENARIO_LARGURA * LARGURA_IMG) - LARGURA_IMG; // Limite direito
+    float limite_superior = 0;
+    float limite_inferior = (CENARIO_ALTURA * ALTURA_IMG) - ALTURA_IMG; // Limite inferior
 
     while (al_get_next_event(J->fila_eventos, &evento)) {
         if (evento.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
@@ -233,6 +285,12 @@ void atualizar_jogo(Jogo* J) {
 
             // Verificar se há colisão antes de mover
             if (!verifica_colisao(J, nova_x, nova_y)) {
+                // Verificar limites antes de mover
+                if (nova_x < limite_esquerdo) nova_x = limite_esquerdo;
+                if (nova_x > limite_direito) nova_x = limite_direito;
+                if (nova_y < limite_superior) nova_y = limite_superior;
+                if (nova_y > limite_inferior) nova_y = limite_inferior;
+
                 J->x = nova_x;
                 J->y = nova_y;
             }
@@ -253,14 +311,14 @@ void atualizar_jogo(Jogo* J) {
         }
     }
 
-    // Se nenhuma tecla de direção está pressionada, mantemos o personagem na posição inicial (sem movimento)
+    // caso nenhuma tecla esteja sendo pressionada (naruto parado
     if (!J->teclas[0] && !J->teclas[1] && !J->teclas[2] && !J->teclas[3]) {
         J->si = 0;
     }
 
-    al_clear_to_color(al_map_rgb(0, 0, 0)); // Limpa a tela
+
     desenhar_cenario(J); // Desenha o cenário
-    al_draw_bitmap_region(J->sprite, 94 * J->si, 99 * J->direcao, 94, 99, J->x, J->y, 0); // Desenha o personagem com a direção correta
+    al_draw_bitmap_region(J->sprite, 94 * J->si, 99 * J->direcao, 94, 99, J->x, J->y, 0);
     al_flip_display(); // Atualiza a tela
 }
 
