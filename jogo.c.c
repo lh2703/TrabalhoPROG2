@@ -167,6 +167,36 @@ bool jogo_rodando(Jogo* J) {
     return J->rodando;
 }
 
+// Verifica se a posição do personagem colide com algo no cenário
+bool verifica_colisao(Jogo* J, float nova_x, float nova_y) {
+    // Verificar as 4 direções do personagem
+
+    // Lados da célula onde o personagem estará
+    int col_left = nova_x / LARGURA_IMG;
+    int col_right = (nova_x + LARGURA_IMG - 1) / LARGURA_IMG;
+    int row_top = nova_y / ALTURA_IMG;
+    int row_bottom = (nova_y + ALTURA_IMG - 1) / ALTURA_IMG;
+
+    // Verifica se a posição está dentro dos limites do cenário e se não colide com parede (1) ou água (2)
+    if (col_left >= 0 && col_left < CENARIO_LARGURA && row_top >= 0 && row_top < CENARIO_ALTURA) {
+        if (J->cenario[row_top][col_left] == 1 || J->cenario[row_top][col_left] == 2) return true; // Colisão na parte superior esquerda
+    }
+
+    if (col_right >= 0 && col_right < CENARIO_LARGURA && row_top >= 0 && row_top < CENARIO_ALTURA) {
+        if (J->cenario[row_top][col_right] == 1 || J->cenario[row_top][col_right] == 2) return true; // Colisão na parte superior direita
+    }
+
+    if (col_left >= 0 && col_left < CENARIO_LARGURA && row_bottom >= 0 && row_bottom < CENARIO_ALTURA) {
+        if (J->cenario[row_bottom][col_left] == 1 || J->cenario[row_bottom][col_left] == 2) return true; // Colisão na parte inferior esquerda
+    }
+
+    if (col_right >= 0 && col_right < CENARIO_LARGURA && row_bottom >= 0 && row_bottom < CENARIO_ALTURA) {
+        if (J->cenario[row_bottom][col_right] == 1 || J->cenario[row_bottom][col_right] == 2) return true; // Colisão na parte inferior direita
+    }
+
+    return false; // Não houve colisão
+}
+
 void atualizar_jogo(Jogo* J) {
     ALLEGRO_EVENT evento;
 
@@ -181,21 +211,30 @@ void atualizar_jogo(Jogo* J) {
             }
 
             // Movimentos do personagem e direção
+            float nova_x = J->x;
+            float nova_y = J->y;
+
             if (J->teclas[0]) { // Cima
-                J->y -= J->velocidade;
+                nova_y -= J->velocidade;
                 J->direcao = 2; // Atualiza direção para cima
             }
             if (J->teclas[1]) { // Baixo
-                J->y += J->velocidade;
+                nova_y += J->velocidade;
                 J->direcao = 0; // Atualiza direção para baixo
             }
             if (J->teclas[2]) { // Esquerda
-                J->x -= J->velocidade;
+                nova_x -= J->velocidade;
                 J->direcao = 1; // Atualiza direção para esquerda
             }
             if (J->teclas[3]) { // Direita
-                J->x += J->velocidade;
+                nova_x += J->velocidade;
                 J->direcao = 3; // Atualiza direção para direita
+            }
+
+            // Verificar se há colisão antes de mover
+            if (!verifica_colisao(J, nova_x, nova_y)) {
+                J->x = nova_x;
+                J->y = nova_y;
             }
         } else if (evento.type == ALLEGRO_EVENT_KEY_DOWN) {
             switch (evento.keyboard.keycode) {
