@@ -5,9 +5,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define CENARIO_LARGURA 12  // Número de colunas do cenário
-#define CENARIO_ALTURA 8    // Número de linhas do cenário
-#define LARGURA_IMG 70      // Tamanho da célula do cenário (em pixels)
+#define CENARIO_LARGURA 12  
+#define CENARIO_ALTURA 8    
+#define LARGURA_IMG 70     
 #define ALTURA_IMG 70
 
 struct Jogo {
